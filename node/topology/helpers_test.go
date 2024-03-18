@@ -22,11 +22,12 @@ import (
 	"testing"
 )
 
-func Test_GetZoneKey(t *testing.T) {
+func Test_GetTopologyKeys(t *testing.T) {
 	tests := []struct {
-		name string
-		node *v1.Node
-		zone string
+		name   string
+		node   *v1.Node
+		region string
+		zone   string
 	}{
 		{
 			name: "has no zone or region keys",
@@ -35,7 +36,8 @@ func Test_GetZoneKey(t *testing.T) {
 					Labels: map[string]string{},
 				},
 			},
-			zone: "",
+			region: "",
+			zone:   "",
 		},
 		{
 			name: "has beta zone and region keys",
@@ -47,7 +49,8 @@ func Test_GetZoneKey(t *testing.T) {
 					},
 				},
 			},
-			zone: "region1:\x00:zone1",
+			region: "region1",
+			zone:   "region1:\x00:zone1",
 		},
 		{
 			name: "has GA zone and region keys",
@@ -59,7 +62,8 @@ func Test_GetZoneKey(t *testing.T) {
 					},
 				},
 			},
-			zone: "region1:\x00:zone1",
+			region: "region1",
+			zone:   "region1:\x00:zone1",
 		},
 		{
 			name: "has both beta and GA zone and region keys",
@@ -73,7 +77,8 @@ func Test_GetZoneKey(t *testing.T) {
 					},
 				},
 			},
-			zone: "region1:\x00:zone1",
+			region: "region1",
+			zone:   "region1:\x00:zone1",
 		},
 		{
 			name: "has both beta and GA zone and region keys, beta labels take precedent",
@@ -87,12 +92,19 @@ func Test_GetZoneKey(t *testing.T) {
 					},
 				},
 			},
-			zone: "region2:\x00:zone2",
+			region: "region2",
+			zone:   "region2:\x00:zone2",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			region := GetRegionKey(test.node)
+			if region != test.region {
+				t.Logf("actual region key: %q", region)
+				t.Logf("expected region key: %q", test.region)
+				t.Errorf("unexpected region key")
+			}
 			zone := GetZoneKey(test.node)
 			if zone != test.zone {
 				t.Logf("actual zone key: %q", zone)

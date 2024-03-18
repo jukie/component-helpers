@@ -42,10 +42,7 @@ func GetZoneKey(node *v1.Node) string {
 		zone, _ = labels[v1.LabelTopologyZone]
 	}
 
-	region, ok := labels[v1.LabelFailureDomainBetaRegion]
-	if !ok {
-		region, _ = labels[v1.LabelTopologyRegion]
-	}
+	region := GetRegionKey(node)
 
 	if region == "" && zone == "" {
 		return ""
@@ -55,4 +52,29 @@ func GetZoneKey(node *v1.Node) string {
 	// (We do assume there's no null characters in a region or failureDomain)
 	// As a nice side-benefit, the null character is not printed by fmt.Print or glog
 	return region + ":\x00:" + zone
+}
+
+// GetRegionKey is a helper function that builds a string identifier that is unique per failure-region;
+// it returns empty-string for no region.
+// Since there are currently two separate region keys:
+//   - "failure-domain.beta.kubernetes.io/region"
+//   - "topology.kubernetes.io/region"
+//
+// GetRegionKey will first check failure-domain.beta.kubernetes.io/region and if not exists, will then check
+// topology.kubernetes.io/region
+func GetRegionKey(node *v1.Node) string {
+	labels := node.Labels
+	if labels == nil {
+		return ""
+	}
+
+	// TODO: "failure-domain.beta..." names are deprecated, but will
+	// stick around a long time due to existing on old extant objects like PVs.
+	// Maybe one day we can stop considering them (see #88493).
+	region, ok := labels[v1.LabelFailureDomainBetaRegion]
+	if !ok {
+		region, _ = labels[v1.LabelTopologyRegion]
+	}
+
+	return region
 }
